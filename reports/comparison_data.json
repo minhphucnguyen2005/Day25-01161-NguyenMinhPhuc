@@ -1,0 +1,74 @@
+{
+  "with_memory_cache": {
+    "total_requests": 400,
+    "availability": 0.74,
+    "error_rate": 0.26,
+    "latency_p50_ms": 266.99,
+    "latency_p95_ms": 316.13,
+    "latency_p99_ms": 320.77,
+    "fallback_success_rate": 0.3659,
+    "cache_hit_rate": 0.475,
+    "circuit_open_count": 11,
+    "recovery_time_ms": 2255.8093070983887,
+    "estimated_cost": 0.047946,
+    "estimated_cost_saved": 0.19,
+    "scenarios": {
+      "primary_timeout_100": "pass",
+      "primary_flaky_50": "pass",
+      "all_healthy": "pass",
+      "all_providers_down": "pass"
+    }
+  },
+  "without_cache": {
+    "total_requests": 400,
+    "availability": 0.7225,
+    "error_rate": 0.2775,
+    "latency_p50_ms": 269.49,
+    "latency_p95_ms": 314.43,
+    "latency_p99_ms": 318.54,
+    "fallback_success_rate": 0.6007,
+    "cache_hit_rate": 0.0,
+    "circuit_open_count": 24,
+    "recovery_time_ms": 2274.1644382476807,
+    "estimated_cost": 0.132978,
+    "estimated_cost_saved": 0.0,
+    "scenarios": {
+      "primary_timeout_100": "pass",
+      "primary_flaky_50": "pass",
+      "all_healthy": "pass",
+      "all_providers_down": "pass"
+    }
+  },
+  "with_redis_cache": {
+    "total_requests": 400,
+    "availability": 0.93,
+    "error_rate": 0.07,
+    "latency_p50_ms": 277.27,
+    "latency_p95_ms": 314.91,
+    "latency_p99_ms": 318.26,
+    "fallback_success_rate": 0.6667,
+    "cache_hit_rate": 0.6975,
+    "circuit_open_count": 10,
+    "recovery_time_ms": 2393.8159942626953,
+    "estimated_cost": 0.039316,
+    "estimated_cost_saved": 0.279,
+    "scenarios": {
+      "primary_timeout_100": "pass",
+      "primary_flaky_50": "pass",
+      "all_healthy": "pass",
+      "all_providers_down": "pass"
+    }
+  },
+  "redis_sample_keys": [
+    "rl:cache:3936614ac4c2",
+    "rl:cache:095946136fea",
+    "rl:cache:4fc3c69b9376",
+    "rl:cache:734852f3cf4a",
+    "rl:cache:fff10da1c72c",
+    "rl:cache:0bc3b1acf73d",
+    "rl:cache:3dab98c0e49e",
+    "rl:cache:98332d0d1c9c",
+    "rl:cache:9e413fd814eb",
+    "rl:cache:8baa2cfa11fa"
+  ]
+}

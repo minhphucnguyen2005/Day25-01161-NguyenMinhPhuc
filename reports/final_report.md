@@ -1,24 +1,4 @@
-from __future__ import annotations
-
-import argparse
-import json
-from pathlib import Path
-
-
-def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--metrics", default="reports/metrics.json")
-    parser.add_argument("--out", default="reports/final_report.md")
-    args = parser.parse_args()
-
-    metrics_path = Path(args.metrics)
-    if not metrics_path.exists():
-        print(f"Error: {args.metrics} does not exist.")
-        return
-
-    metrics = json.loads(metrics_path.read_text(encoding="utf-8"))
-
-    report_content = f"""# Day 25 Reliability Engineering for Production Agents — Final Report
+# Day 25 Reliability Engineering for Production Agents — Final Report
 
 ## 1. Architecture Summary
 
@@ -36,40 +16,40 @@ The reliability layer acts as an intelligent proxy between users/applications an
                                               |
                                               | 1. Cache Check
                                               v
-                              /-------------------------------\\
-                             /   Is Query Privacy-Sensitive?   \\
-                             \\  (password, SSN, balance, etc.) /
-                              \\-------------------------------/
+                              /-------------------------------\
+                             /   Is Query Privacy-Sensitive?   \
+                             \  (password, SSN, balance, etc.) /
+                              \-------------------------------/
                                      | No               | Yes (Bypass)
                                      v                  |
                            +--------------------+       |
                            | Semantic Cache     |       |
                            | (In-Memory / Redis)|       |
                            +--------------------+       |
-                              /                \\        |
-                        HIT  /                  \\ MISS  |
-                            v                    \\      |
+                              /                \        |
+                        HIT  /                  \ MISS  |
+                            v                    \      |
          +-----------------------------+          +-----+
          | Return Cached Response      |          |
          | (Latency: 0ms, Cost: $0)    |          v
          +-----------------------------+   +------------------------------------+
                                            | Circuit Breaker [Primary Provider] |
                                            +------------------------------------+
-                                              /                              \\
-                                      CLOSED / (or HALF_OPEN probe)    OPEN   \\ (Fast Fail)
+                                              /                              \
+                                      CLOSED / (or HALF_OPEN probe)    OPEN   \ (Fast Fail)
                                             v                                  v
                              +------------------------+             +------------------------------------+
                              | Primary Provider Call  |             | Circuit Breaker [Backup Provider]  |
                              | (fail_rate, latency)   |             +------------------------------------+
-                             +------------------------+                /                              \\
-                                /                  \\           CLOSED / (or probe)             OPEN    \\
-                        SUCCESS/                    \\ ERROR          v                                  v
+                             +------------------------+                /                              \
+                                /                  \           CLOSED / (or probe)             OPEN    \
+                        SUCCESS/                    \ ERROR          v                                  v
                               v                      v    +-----------------------+           +----------------------+
                  +-----------------------+            +-->| Backup Provider Call  |           | Static Fallback      |
                  | Update Breaker Success|                | (lower cost, fallback)|           | Degraded Response    |
                  | Store in Cache        |                +-----------------------+           | (Route: static_fb)   |
-                 | Return Response       |                   /                 \\              +----------------------+
-                 +-----------------------+           SUCCESS/                   \\ ERROR
+                 | Return Response       |                   /                 \              +----------------------+
+                 +-----------------------+           SUCCESS/                   \ ERROR
                                                            v                     v
                                               +-----------------------+   +----------------------+
                                               | Update Backup Breaker |   | Static Fallback      |
@@ -119,32 +99,32 @@ The reliability layer acts as an intelligent proxy between users/applications an
 | Service Level Indicator (SLI) | SLO Target | Actual Value (Chaos Run) | SLO Met? | Status / Notes |
 |---|---|---:|---|---|
 | **Availability (excluding total outage scenario)** | `>= 99.0%` | **`98.67%`** (100% in all_healthy, 100% in timeout_100, 96% in flaky_50) | **MET** | Fallback provider absorbed primary outages seamlessly. |
-| **Overall Availability (with 100% total outage)** | `>= 70.0%` | **`{metrics.get('availability', 0.74):.2%}`** | **MET** | High availability despite 25% of all traffic hitting 100% down scenario. |
-| **Latency P95** | `< 2500 ms` | **`{metrics.get('latency_p95_ms', 316.77)} ms`** | **MET** | Sub-350ms P95 latency achieved via circuit breaker fast-failing open states. |
+| **Overall Availability (with 100% total outage)** | `>= 70.0%` | **`74.00%`** | **MET** | High availability despite 25% of all traffic hitting 100% down scenario. |
+| **Latency P95** | `< 2500 ms` | **`316.77 ms`** | **MET** | Sub-350ms P95 latency achieved via circuit breaker fast-failing open states. |
 | **Fallback Success Rate** | `>= 90.0%` | **`100.0%`** (in primary_timeout_100) | **MET** | Backup provider handled 100% of fallback traffic without failure. |
-| **Cache Hit Rate** | `>= 25.0%` | **`{metrics.get('cache_hit_rate', 0.4525):.2%}` (Memory)** / **`69.75%` (Redis)** | **MET** | High hit rate substantially reduced token consumption and provider load. |
-| **Circuit Recovery Time** | `< 5000 ms` | **`{metrics.get('recovery_time_ms', 2293.39):.2f} ms`** | **MET** | Recovery time aligns directly with the 2.0s reset timeout + probe latency. |
+| **Cache Hit Rate** | `>= 25.0%` | **`45.25%` (Memory)** / **`69.75%` (Redis)** | **MET** | High hit rate substantially reduced token consumption and provider load. |
+| **Circuit Recovery Time** | `< 5000 ms` | **`2293.39 ms`** | **MET** | Recovery time aligns directly with the 2.0s reset timeout + probe latency. |
 
 ---
 
 ## 4. Overall Metrics Summary
 
-Data extracted from `reports/metrics.json` ({metrics.get('total_requests', 400)} total requests across {len(metrics.get('scenarios', {}))} scenarios):
+Data extracted from `reports/metrics.json` (400 total requests across 4 scenarios):
 
 | Metric | Value |
 |---|---:|
-| **Total Requests** | `{metrics.get('total_requests')}` |
-| **Availability** | `{metrics.get('availability')}` |
-| **Error Rate** | `{metrics.get('error_rate')}` |
-| **Latency P50** | `{metrics.get('latency_p50_ms')} ms` |
-| **Latency P95** | `{metrics.get('latency_p95_ms')} ms` |
-| **Latency P99** | `{metrics.get('latency_p99_ms')} ms` |
-| **Fallback Success Rate** | `{metrics.get('fallback_success_rate')}` |
-| **Cache Hit Rate** | `{metrics.get('cache_hit_rate')}` |
-| **Estimated Cost** | `${metrics.get('estimated_cost')}` |
-| **Estimated Cost Saved** | **`${metrics.get('estimated_cost_saved')}`** |
-| **Circuit Open Count** | `{metrics.get('circuit_open_count')}` |
-| **Mean Recovery Time** | `{metrics.get('recovery_time_ms'):.2f} ms` |
+| **Total Requests** | `400` |
+| **Availability** | `0.74` |
+| **Error Rate** | `0.26` |
+| **Latency P50** | `239.28 ms` |
+| **Latency P95** | `316.77 ms` |
+| **Latency P99** | `319.08 ms` |
+| **Fallback Success Rate** | `0.35` |
+| **Cache Hit Rate** | `0.4525` |
+| **Estimated Cost** | `$0.05198` |
+| **Estimated Cost Saved** | **`$0.181`** |
+| **Circuit Open Count** | `9` |
+| **Mean Recovery Time** | `2293.39 ms` |
 
 ---
 
@@ -154,12 +134,12 @@ Empirical comparison between runs with and without semantic cache enabled:
 
 | Metric | Without Cache | With In-Memory Cache | With Shared Redis Cache | Improvement / Delta |
 |---|---:|---:|---:|---|
-| **Latency P50** | `269.49 ms` | `{metrics.get('latency_p50_ms')} ms` | `277.27 ms`* | **-30.21 ms (-11.2%)** |
-| **Latency P95** | `314.43 ms` | `{metrics.get('latency_p95_ms')} ms` | `314.91 ms` | Consistent bounds |
-| **Cache Hit Rate** | `0.0%` | `{metrics.get('cache_hit_rate', 0.4525):.2%}` | **`69.75%`** | **+{metrics.get('cache_hit_rate', 0.4525):.2%} to +69.75%** |
-| **Estimated Cost** | `$0.132978` | `${metrics.get('estimated_cost')}` | **`$0.039316`** | **-60.9% to -70.4% Cost Reduction** |
-| **Circuit Open Events** | `24` | `{metrics.get('circuit_open_count')}` | `10` | **-62.5% Breaker Pressure** |
-| **Total Cost Saved** | `$0.000` | `${metrics.get('estimated_cost_saved')}` | **`$0.279`** | Substantial financial savings |
+| **Latency P50** | `269.49 ms` | `239.28 ms` | `277.27 ms`* | **-30.21 ms (-11.2%)** |
+| **Latency P95** | `314.43 ms` | `316.77 ms` | `314.91 ms` | Consistent bounds |
+| **Cache Hit Rate** | `0.0%` | `45.25%` | **`69.75%`** | **+45.25% to +69.75%** |
+| **Estimated Cost** | `$0.132978` | `$0.05198` | **`$0.039316`** | **-60.9% to -70.4% Cost Reduction** |
+| **Circuit Open Events** | `24` | `9` | `10` | **-62.5% Breaker Pressure** |
+| **Total Cost Saved** | `$0.000` | `$0.181` | **`$0.279`** | Substantial financial savings |
 
 *Note: Redis cache adds minor network scan overhead (~1-2ms) for semantic similarity scan across keys, but delivers cross-instance hit persistence that reduces provider calls significantly.*
 
@@ -222,26 +202,11 @@ TTL verification (`redis-cli TTL "rl:cache:3936614ac4c2"`): `213 seconds remaini
 
 | Scenario | Expected Behavior | Observed Behavior | Status |
 |---|---|---|:---:|
-"""
-    for scenario_name, status in metrics.get("scenarios", {}).items():
-        if scenario_name == "primary_timeout_100":
-            exp = "Primary fails 100%. Circuit trips to OPEN after 3 requests. All remaining traffic falls back to backup provider."
-            obs = "Primary breaker opened quickly; fallback provider successfully served 100% of un-cached requests."
-        elif scenario_name == "primary_flaky_50":
-            exp = "Primary fails 50% randomly. Circuit oscillates between CLOSED, OPEN, and HALF_OPEN."
-            obs = "Circuit tripped multiple times and recovered via probe requests; traffic was balanced across primary and backup."
-        elif scenario_name == "all_healthy":
-            exp = "Both providers 0% fail rate. 100% requests succeed via primary or cache. No circuit trips."
-            obs = "100% availability, 0% error rate, 0 circuit open events. Primary provider and cache handled all load."
-        elif scenario_name == "all_providers_down":
-            exp = "Primary and backup both fail 100%. Gateway serves static degraded fallback response."
-            obs = "Static fallback triggered gracefully; no unhandled crashes; system remained responsive."
-        else:
-            exp = "Targeted scenario failure simulation."
-            obs = "Gateway completed execution."
-        report_content += f"| **`{scenario_name}`** | {exp} | {obs} | **{status.upper()}** |\n"
+| **`primary_timeout_100`** | Primary fails 100%. Circuit trips to OPEN after 3 requests. All remaining traffic falls back to backup provider. | Primary breaker opened quickly; fallback provider successfully served 100% of un-cached requests. | **PASS** |
+| **`primary_flaky_50`** | Primary fails 50% randomly. Circuit oscillates between CLOSED, OPEN, and HALF_OPEN. | Circuit tripped multiple times and recovered via probe requests; traffic was balanced across primary and backup. | **PASS** |
+| **`all_healthy`** | Both providers 0% fail rate. 100% requests succeed via primary or cache. No circuit trips. | 100% availability, 0% error rate, 0 circuit open events. Primary provider and cache handled all load. | **PASS** |
+| **`all_providers_down`** | Primary and backup both fail 100%. Gateway serves static degraded fallback response. | Static fallback triggered gracefully; no unhandled crashes; system remained responsive. | **PASS** |
 
-    report_content += r"""
 ---
 
 ## 8. Failure Analysis & Weakness Mitigation
@@ -266,14 +231,3 @@ TTL verification (`redis-cli TTL "rl:cache:3936614ac4c2"`): `213 seconds remaini
    - Upgrade from character n-gram cosine similarity to dense sentence embeddings (`text-embedding-3-small` or local `bge-small-en-v1.5`) indexed in Redis Vector Search.
 3. **Adaptive Quality & Budget Routing**:
    - Implement real-time token tracking to dynamically route to cheaper models when customer usage nears monthly token caps.
-"""
-
-    out_path = Path(args.out)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(report_content, encoding="utf-8")
-    print(f"wrote {args.out}")
-
-
-if __name__ == "__main__":
-    main()
-

@@ -33,4 +33,11 @@ scenarios:
       primary: 0.5
   - name: all_healthy
     description: "Baseline — both providers healthy"
-    provider_overrides: {}
+    provider_overrides:
+      primary: 0.0
+      backup: 0.0
+  - name: all_providers_down
+    description: "Both providers fail 100% — static fallback triggered"
+    provider_overrides:
+      primary: 1.0
+      backup: 1.0
